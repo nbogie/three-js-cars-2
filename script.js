@@ -1,3 +1,5 @@
+// master is https://github.com/nbogie/three-js-cars-2
+
 import * as THREE from 'https://unpkg.com/three@0.122.0/build/three.module.js';
 import { OrbitControls } from 'https://unpkg.com/three@0.122.0/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'https://unpkg.com/three@0.122.0/examples/jsm/loaders/GLTFLoader.js';
@@ -45,15 +47,16 @@ function setupLights(scene) {
     scene.add(dirLight2);
 }
 
-async function loadCarsAsync(scene) {
+async function loadCarsAsyncFromIndividualFiles(scene) {
     const gltfLoader = new GLTFLoader();
-    const modelURLs = [1, 2, 3, 4, 5, 6, 7, 8].map(n => `./models/car${n}.glb`);
+    const modelURLs = ["car3_minivan", "car1_truck", "car2_dragster"].map(name => `./models/${name}.glb`);
     const loadedModels = [];
     function namedLikeCarOrVan(obj) {
         return obj.name
             && (
                 obj.name.toLowerCase().startsWith("car")
                 || obj.name.toLowerCase().startsWith("van")
+                || obj.name.toLowerCase().startsWith("truck")
             )
     }
     const promises = modelURLs.map((url, ix) =>
@@ -62,10 +65,8 @@ async function loadCarsAsync(scene) {
                 const root = gltf.scene;
                 dumpObjectToConsoleAsString(root);
                 const car = root.children.find(namedLikeCarOrVan) || root;
-                //when you know the exact name: 
                 //root.getObjectByName('car')
                 const phaseStep = Math.PI * 2 / modelURLs.length;
-                // cars.push({mesh: car, phase: phaseStep*ix});
                 scene.add(car);
                 resolve({ mesh: car, phase: phaseStep * ix });
             });
@@ -77,12 +78,12 @@ async function loadCarsAsync(scene) {
 async function loadCarsAsyncFromSingleFile(scene) {
     console.log("loading ALL cars from one file!")
     const url = "./models/cars_big_set.glb"
-    
+
     const gltfLoader = new GLTFLoader();
     function namedLikeCar(obj) {
         return obj.name && obj.name.toLowerCase().startsWith("car")
     }
-    
+
     const promise = new Promise((resolve, reject) => {
 
         gltfLoader.load(url, (gltf) => {
@@ -194,15 +195,12 @@ async function setupAsync() {
     setupLights(scene);
     setupGround(scene);
 
-    let carsSmallSet = await loadCarsAsync(scene);
+    let carsSmallSet = await loadCarsAsyncFromIndividualFiles(scene);
     let carsBigSet = await loadCarsAsyncFromSingleFile(scene);
     console.log("dumping cars found in full set...")
     carsBigSet.forEach(c => {
         dumpObjectToConsoleAsString(c.mesh)
     })
-
-    // let dragonHead = await loadModelAsync("models/dragon_head1.glb", scene);
-    // dragonHead.position.y = 0.6;
 
     setupShadows(scene, renderer);
 
@@ -213,8 +211,8 @@ async function setupAsync() {
 
 
     function render(time) {
+        updateCars(carsSmallSet, time * 0.001, 3);
         updateCars(carsBigSet, time * 0.001, 10);
-        updateCars(carsSmallSet, time * 0.001, 5);
 
         document.getElementById("info").innerText = `Time: ${(time / 1000).toFixed(1)}`;
 
